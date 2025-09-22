@@ -12,6 +12,13 @@ const AppContext = createContext();
 export const AppProvider = ({ children }) => {
 
     const currency = import.meta.env.VITE_CURRENCY || "INR";
+    const formatPrice = (amount) => {
+        try {
+            return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(Number(amount || 0));
+        } catch {
+            return `₹${amount}`;
+        }
+    };
     const navigate = useNavigate();
     const { user } = useUser();
     const { getToken } = useAuth()
@@ -72,7 +79,7 @@ export const AppProvider = ({ children }) => {
     }, []);
 
     const value = {
-        currency, navigate,
+        currency, formatPrice, navigate,
         user, getToken,
         isOwner, setIsOwner,
         axios,
