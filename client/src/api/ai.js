@@ -20,10 +20,16 @@ export const getAvailability = async (params) => {
   return data
 }
 
+export const ragSearch = async (query) => {
+  const { data } = await api.post('/rag-search', { query })
+  return data
+}
+
 export default {
   getVapiToken,
   searchHotels,
-  getAvailability
+  getAvailability,
+  ragSearch
 }
 
 

@@ -4,6 +4,7 @@ import { useAppContext } from '../context/AppContext';
 import { useParams } from 'react-router-dom';
 import StarRating from '../components/StarRating';
 import toast from 'react-hot-toast';
+import aiApi from '../api/ai';
 
 const RoomDetails = () => {
     const { id } = useParams();
@@ -16,6 +17,25 @@ const RoomDetails = () => {
     const [guests, setGuests] = useState(1);
 
     const [isAvailable, setIsAvailable] = useState(false);
+    const [ragPreview, setRagPreview] = useState(null);
+    const [ragLoading, setRagLoading] = useState(false);
+
+    const handleRagPreview = async () => {
+        try {
+            setRagLoading(true);
+            const sampleQuery = `family suite with wifi in ${room?.hotel?.city || 'your city'}`;
+            const res = await aiApi.ragSearch(sampleQuery);
+            if (res.success) {
+                setRagPreview({ query: sampleQuery, context: res.context, sources: res.sources });
+            } else {
+                toast.error(res.message || 'RAG search failed');
+            }
+        } catch (err) {
+            toast.error(err.message);
+        } finally {
+            setRagLoading(false);
+        }
+    }
 
     // Check if the Room is Available
     const checkAvailability = async () => {
@@ -183,6 +203,36 @@ const RoomDetails = () => {
                 >
                     View on Google Maps
                 </a>
+            </div>
+
+            {/* RAG Debug Tools */}
+            <div className='mt-8 p-4 border border-dashed border-gray-300 rounded-lg'>
+                <div className='flex items-center justify-between gap-4'>
+                    <p className='text-sm text-gray-600'>Debug: Preview RAG context (client-side)</p>
+                    <button onClick={handleRagPreview} disabled={ragLoading}
+                        className='px-4 py-2 rounded bg-gray-800 text-white hover:bg-gray-700 disabled:opacity-60'>
+                        {ragLoading ? 'Running…' : 'Preview RAG Context'}
+                    </button>
+                </div>
+                {ragPreview && (
+                    <div className='mt-4 text-sm'>
+                        <p className='text-gray-700'><span className='font-medium'>Query:</span> {ragPreview.query}</p>
+                        <div className='mt-2'>
+                            <p className='font-medium mb-1'>Context</p>
+                            <pre className='whitespace-pre-wrap bg-gray-50 p-3 rounded border border-gray-200'>{ragPreview.context || '(empty)'}</pre>
+                        </div>
+                        <div className='mt-3'>
+                            <p className='font-medium mb-1'>Top Matches</p>
+                            <ul className='space-y-1 list-disc pl-5'>
+                                {(ragPreview.sources || []).map((s, i) => (
+                                    <li key={`${s.type}-${s.id}-${i}`} className='text-gray-700'>
+                                        <span className='font-medium capitalize'>{s.type}</span>: {s.title} <span className='text-gray-500'>(score: {s.score})</span>
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    </div>
+                )}
             </div>
 
             <div className='flex flex-col items-start gap-4'>
