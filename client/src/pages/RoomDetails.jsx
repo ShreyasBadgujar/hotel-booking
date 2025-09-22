@@ -158,6 +158,33 @@ const RoomDetails = () => {
                 <p>Guests will be allocated on the ground floor according to availability. You get a comfortable Two bedroom apartment has a true city feeling. The price quoted is for two guest, at the guest slot please mark the number of guests to get the exact price for groups. The Guests will be allocated ground floor according to availability. You get the comfortable two bedroom apartment that has a true city feeling.</p>
             </div>
 
+            {/* Google Maps Location */}
+            <div className='mt-10 w-full'>
+                <h2 className='text-xl md:text-2xl font-playfair mb-3'>Location</h2>
+                <p className='text-gray-600 mb-4'>{room.hotel.address}</p>
+                <div className='w-full rounded-xl overflow-hidden shadow-lg border border-gray-200'>
+                    {(() => { const mapQuery = `${room.hotel.name}, ${room.hotel.address}${room.hotel.city ? ", " + room.hotel.city : ''}`; return (
+                    <iframe
+                        title='Hotel Location Map'
+                        width='100%'
+                        height='360'
+                        style={{ border: 0 }}
+                        loading='lazy'
+                        allowFullScreen
+                        referrerPolicy='no-referrer-when-downgrade'
+                        src={`https://www.google.com/maps?q=${encodeURIComponent(mapQuery)}&output=embed`}
+                    />) })()}
+                </div>
+                <a
+                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${room.hotel.name}, ${room.hotel.address}${room.hotel.city ? ", " + room.hotel.city : ''}`)}`}
+                    target='_blank'
+                    rel='noreferrer'
+                    className='inline-block mt-3 text-blue-600 hover:underline'
+                >
+                    View on Google Maps
+                </a>
+            </div>
+
             <div className='flex flex-col items-start gap-4'>
                 <div className='flex gap-4'>
                     <img className='h-14 w-14 md:h-18 md:w-18 rounded-full' src={room.hotel.owner.image} alt='Host' />
