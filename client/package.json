@@ -12,7 +12,9 @@
   "dependencies": {
     "@clerk/clerk-react": "^5.26.1",
     "@tailwindcss/vite": "^4.1.3",
+    "@vapi-ai/web": "^2.3.10",
     "axios": "^1.8.4",
+    "lucide-react": "^0.544.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-hot-toast": "^2.5.2",

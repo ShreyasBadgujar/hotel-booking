@@ -26,7 +26,7 @@ const AllRooms = () => {
 
     const [searchParams, setSearchParams] = useSearchParams();
 
-    const { facilityIcons, navigate, rooms, currency } = useAppContext();
+    const { facilityIcons, navigate, rooms, currency, formatPrice } = useAppContext();
     const [openFilters, setOpenFilters] = useState(false);
 
     // State for managing the selected filters
@@ -159,7 +159,7 @@ const AllRooms = () => {
                                 ))}
                             </div>
                             {/* Room Price per Night */}
-                            <p className='text-xl font-medium text-gray-700'>${room.pricePerNight} /night</p>
+                            <p className='text-xl font-medium text-gray-700'>{formatPrice(room.pricePerNight)} /night</p>
                         </div>
                     </div>
                 ))}

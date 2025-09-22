@@ -14,6 +14,7 @@ import RoomDetails from './pages/RoomDetails'
 import Footer from './components/Footer'
 import MyBookings from './pages/MyBookings'
 import Loader from './components/Loader'
+import VapiVoice from './components/VapiVoice'
 
 const App = () => {
 
@@ -42,6 +43,7 @@ const App = () => {
       </Routes>
       </div>
       <Footer />
+      <VapiVoice />
     </div>
   )
 }
