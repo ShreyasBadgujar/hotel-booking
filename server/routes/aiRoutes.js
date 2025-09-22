@@ -10,3 +10,4 @@ aiRouter.get("/availability", getAvailability);
 export default aiRouter;
 
 
+
