@@ -143,5 +143,95 @@ export const ragSearch = async (req, res) => {
   }
 };
 
+// GET /api/ai/housekeeping-plan?days=7
+// Computes daily cleaning workload and recommended staffing for the owner's hotel
+export const getHousekeepingPlan = async (req, res) => {
+  try {
+    // Identify hotel by owner (Clerk user id)
+    const ownerId = req.auth?.userId;
+    if (!ownerId) {
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+    }
+
+    // Lazy import to avoid cycle
+    const { default: Booking } = await import("../models/Booking.js");
+    const { default: Hotel } = await import("../models/Hotel.js");
+    const { default: Room } = await import("../models/Room.js");
+
+    const hotel = await Hotel.findOne({ owner: ownerId }).lean();
+    if (!hotel) {
+      return res.json({ success: false, message: "No Hotel found for owner" });
+    }
+
+    const days = Math.max(1, Math.min(31, Number(req.query.days) || 7));
+    const start = new Date();
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(start);
+    end.setDate(end.getDate() + days);
+
+    // Fetch bookings overlapping the range for this hotel
+    const bookings = await Booking.find({
+      hotel: String(hotel._id),
+      checkInDate: { $lt: end },
+      checkOutDate: { $gt: start },
+      status: { $ne: "cancelled" }
+    }).lean();
+
+    const roomIds = [...new Set(bookings.map(b => b.room))];
+    const rooms = await Room.find({ _id: { $in: roomIds } }).lean();
+    const roomById = Object.fromEntries(rooms.map(r => [String(r._id), r]));
+
+    // Parameters for workload estimation (minutes)
+    const CHECKOUT_CLEAN_MIN = 60; // deep clean after checkout
+    const STAYOVER_CLEAN_MIN = 20; // light clean per stay night
+    const CHECKIN_PREP_MIN = 10; // final prep touch before check-in
+    const STAFF_SHIFT_MIN = 8 * 60; // 8 hours per staff
+
+    // Build per-day plan
+    const plan = [];
+    for (let i = 0; i < days; i++) {
+      const day = new Date(start);
+      day.setDate(start.getDate() + i);
+      const dayStart = new Date(day);
+      const dayEnd = new Date(day);
+      dayStart.setHours(0, 0, 0, 0);
+      dayEnd.setHours(23, 59, 59, 999);
+
+      const checkouts = bookings.filter(b => new Date(b.checkOutDate) >= dayStart && new Date(b.checkOutDate) <= dayEnd);
+      const checkins = bookings.filter(b => new Date(b.checkInDate) >= dayStart && new Date(b.checkInDate) <= dayEnd);
+
+      // Stayovers: bookings that span the day (after check-in and before checkout)
+      const stayovers = bookings.filter(b => new Date(b.checkInDate) < dayStart && new Date(b.checkOutDate) > dayEnd);
+
+      const workloadMinutes = (
+        checkouts.length * CHECKOUT_CLEAN_MIN +
+        stayovers.length * STAYOVER_CLEAN_MIN +
+        checkins.length * CHECKIN_PREP_MIN
+      );
+      const staffNeeded = Math.max(1, Math.ceil(workloadMinutes / STAFF_SHIFT_MIN));
+
+      plan.push({
+        date: dayStart.toISOString().slice(0, 10),
+        totals: {
+          checkins: checkins.length,
+          checkouts: checkouts.length,
+          stayovers: stayovers.length,
+          workloadMinutes,
+          staffNeeded,
+        },
+        tasks: {
+          checkouts: checkouts.map(b => ({ bookingId: String(b._id), roomId: String(b.room), roomType: roomById[String(b.room)]?.roomType })),
+          checkins: checkins.map(b => ({ bookingId: String(b._id), roomId: String(b.room), roomType: roomById[String(b.room)]?.roomType })),
+          stayovers: stayovers.map(b => ({ bookingId: String(b._id), roomId: String(b.room), roomType: roomById[String(b.room)]?.roomType })),
+        }
+      });
+    }
+
+    return res.json({ success: true, hotel: { id: String(hotel._id), name: hotel.name }, plan, params: { days, CHECKOUT_CLEAN_MIN, STAYOVER_CLEAN_MIN, CHECKIN_PREP_MIN, STAFF_SHIFT_MIN } });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
 
 

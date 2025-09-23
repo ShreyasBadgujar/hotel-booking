@@ -25,11 +25,17 @@ export const ragSearch = async (query) => {
   return data
 }
 
+export const getHousekeepingPlan = async (params) => {
+  const { data } = await api.get('/housekeeping-plan', { params })
+  return data
+}
+
 export default {
   getVapiToken,
   searchHotels,
   getAvailability,
-  ragSearch
+  ragSearch,
+  getHousekeepingPlan
 }
 
 

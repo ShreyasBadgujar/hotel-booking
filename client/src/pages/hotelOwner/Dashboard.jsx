@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { assets } from '../../assets/assets'
 import Title from '../../components/Title';
 import { useAppContext } from '../../context/AppContext';
+import aiApi from '../../api/ai';
 
 const Dashboard = () => {
 
@@ -12,6 +13,8 @@ const Dashboard = () => {
         totalBookings: 0,
         totalRevenue: 0,
     });
+
+    const [housekeeping, setHousekeeping] = useState({ loading: false, plan: [], params: null });
 
     const fetchDashboardData = async () => {
         try {
@@ -29,6 +32,19 @@ const Dashboard = () => {
     useEffect(() => {
         if (user) {
             fetchDashboardData();
+            (async () => {
+                try {
+                    setHousekeeping((s) => ({ ...s, loading: true }));
+                    const res = await aiApi.getHousekeepingPlan({ days: 7 });
+                    if (res.success) {
+                        setHousekeeping({ loading: false, plan: res.plan, params: res.params });
+                    } else {
+                        setHousekeeping({ loading: false, plan: [], params: null });
+                    }
+                } catch (e) {
+                    setHousekeeping({ loading: false, plan: [], params: null });
+                }
+            })();
         }
     }, [user]);
 
@@ -81,6 +97,32 @@ const Dashboard = () => {
                         }
                     </tbody>
                 </table>
+            </div>
+
+            {/* Housekeeping & Staffing Plan */}
+            <div className='mt-8'>
+                <h2 className='text-xl text-blue-950/70 font-medium mb-3'>Housekeeping & Staffing (Next 7 days)</h2>
+                <div className='w-full max-w-3xl border border-gray-300 rounded-lg p-4'>
+                    {housekeeping.loading ? (
+                        <p className='text-gray-500 text-sm'>Loading plan…</p>
+                    ) : housekeeping.plan.length === 0 ? (
+                        <p className='text-gray-500 text-sm'>No plan available.</p>
+                    ) : (
+                        <ul className='space-y-3'>
+                            {housekeeping.plan.map((d) => (
+                                <li key={d.date} className='border-b last:border-b-0 pb-3'>
+                                    <div className='flex items-center justify-between'>
+                                        <p className='font-medium'>{d.date}</p>
+                                        <p className='text-sm text-gray-600'>Staff needed: {d.totals.staffNeeded}</p>
+                                    </div>
+                                    <p className='text-sm text-gray-700 mt-1'>
+                                        Checkouts: {d.totals.checkouts} · Stayovers: {d.totals.stayovers} · Checkins: {d.totals.checkins} · Workload: {Math.round(d.totals.workloadMinutes)} min
+                                    </p>
+                                </li>
+                            ))}
+                        </ul>
+                    )}
+                </div>
             </div>
 
         </div>

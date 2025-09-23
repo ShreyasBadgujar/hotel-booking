@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import Vapi from '@vapi-ai/web'
 import { getVapiToken } from '../api/ai'
-import { Mic, MicOff, Bot, User, Filter, PhoneOff } from 'lucide-react'
+import { Mic, MicOff, Bot, User, Filter, PhoneOff, VolumeX, Volume2 } from 'lucide-react'
 
 const VapiVoice = () => {
   const vapiRef = useRef(null)
@@ -9,6 +9,7 @@ const VapiVoice = () => {
   const [messages, setMessages] = useState([]) // { role: 'user'|'assistant', text: string, timestamp: number }
   const [filter, setFilter] = useState('all') // 'all' | 'assistant' | 'user'
   const [isConnecting, setIsConnecting] = useState(false)
+  const [isMuted, setIsMuted] = useState(false)
   
 
   const publicKey = import.meta.env.VITE_VAPI_PUBLIC_KEY
@@ -126,6 +127,7 @@ const VapiVoice = () => {
     } catch {}
     setIsListening(false)
     setIsConnecting(false)
+    setIsMuted(false)
     setMessages([])
     setFilter('all')
     try {
@@ -134,6 +136,18 @@ const VapiVoice = () => {
       }
       vapiRef.current = null
     } catch {}
+  }
+
+  const toggleMute = async () => {
+    if (!vapiRef.current || !isListening) return
+    
+    try {
+      const newMuteState = !isMuted
+      await vapiRef.current.setMuted(newMuteState)
+      setIsMuted(newMuteState)
+    } catch (err) {
+      console.error('Failed to toggle mute', err)
+    }
   }
 
   if (!publicKey) {
@@ -155,9 +169,17 @@ const VapiVoice = () => {
                 <Bot className="w-5 h-5" />
                 <span className="font-semibold">AI Assistant</span>
                 {isListening && (
-                  <div className="flex items-center gap-1">
-                    <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                    <span className="text-xs text-green-200">Live</span>
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1">
+                      <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                      <span className="text-xs text-green-200">Live</span>
+                    </div>
+                    {isMuted && (
+                      <div className="flex items-center gap-1">
+                        <VolumeX className="w-3 h-3 text-orange-300" />
+                        <span className="text-xs text-orange-200">Muted</span>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -222,6 +244,22 @@ const VapiVoice = () => {
 
         {(isListening || isConnecting) && (
           <>
+            <button
+              onClick={toggleMute}
+              disabled={isConnecting}
+              className={`w-10 h-10 rounded-full shadow flex items-center justify-center transition-all duration-300 ${
+                isMuted 
+                  ? 'bg-orange-600 hover:bg-orange-700' 
+                  : 'bg-gray-600 hover:bg-gray-700'
+              } disabled:opacity-50 disabled:cursor-not-allowed`}
+              aria-label={isMuted ? 'Unmute microphone' : 'Mute microphone'}
+            >
+              {isMuted ? (
+                <VolumeX className="w-5 h-5 text-white" />
+              ) : (
+                <Volume2 className="w-5 h-5 text-white" />
+              )}
+            </button>
             <button
               onClick={cut}
               className="w-10 h-10 rounded-full shadow flex items-center justify-center bg-red-600 text-white hover:bg-red-700"
