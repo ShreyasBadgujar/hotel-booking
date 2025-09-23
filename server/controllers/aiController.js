@@ -127,15 +127,56 @@ export const ragSearch = async (req, res) => {
       payload: doc.payload,
     }));
 
-    const context = sources.map((s, idx) => {
+    // Group sources by city for comparison
+    const cityGroups = {};
+    
+    sources.forEach((s) => {
+      let city = '';
       if (s.type === "hotel") {
-        const h = s.payload;
-        return `Hotel ${idx + 1}: ${h.name} | Address: ${h.address}, ${h.city}. Contact: ${h.contact}.`;
-      } else {
-        const r = s.payload;
-        return `Room ${idx + 1}: ${r.roomType} | PricePerNight: ${r.pricePerNight} | Amenities: ${(r.amenities || []).join(", ")}`;
+        city = s.payload.city || 'Unknown';
+      } else if (s.type === "room") {
+        // For rooms, we need to get the hotel's city
+        const hotelId = s.payload.hotel;
+        const hotel = hotels.find(h => String(h._id) === String(hotelId));
+        city = hotel?.city || 'Unknown';
       }
-    }).join("\n");
+      
+      if (!cityGroups[city]) {
+        cityGroups[city] = { hotels: [], rooms: [] };
+      }
+      
+      if (s.type === "hotel") {
+        cityGroups[city].hotels.push(s);
+      } else {
+        cityGroups[city].rooms.push(s);
+      }
+    });
+
+    // Build context grouped by city
+    const context = Object.entries(cityGroups)
+      .sort(([a], [b]) => a.localeCompare(b)) // Sort cities alphabetically
+      .map(([city, group]) => {
+        let cityContext = `\n=== ${city.toUpperCase()} ===\n`;
+        
+        if (group.hotels.length > 0) {
+          cityContext += "Hotels:\n";
+          group.hotels.forEach((s, idx) => {
+            const h = s.payload;
+            cityContext += `${idx + 1}. ${h.name} | Address: ${h.address} | Contact: ${h.contact}\n`;
+          });
+        }
+        
+        if (group.rooms.length > 0) {
+          cityContext += "Rooms:\n";
+          group.rooms.forEach((s, idx) => {
+            const r = s.payload;
+            const hotel = hotels.find(h => String(h._id) === String(r.hotel));
+            cityContext += `${idx + 1}. ${r.roomType} at ${hotel?.name || 'Unknown Hotel'} | Price: $${r.pricePerNight} | Amenities: ${(r.amenities || []).join(", ")}\n`;
+          });
+        }
+        
+        return cityContext;
+      }).join("\n");
 
     return res.json({ success: true, context, sources });
   } catch (err) {
